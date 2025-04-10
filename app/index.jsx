@@ -1,7 +1,7 @@
 // react
 import { useState, useRef, useEffect, useCallback } from 'react';
 // react-native
-import { StyleSheet, TouchableOpacity, View, Dimensions, Image, BackHandler, AppState, Text, Pressable } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Dimensions, Image, BackHandler, AppState, Text, Pressable, TextInput } from 'react-native';
 // react-native-vision-camera
 import { useCameraDevice, Camera, useCameraFormat, useCameraPermission } from 'react-native-vision-camera';
 // @gorhom/bottom-sheet
@@ -35,7 +35,7 @@ const screenWidth = Dimensions.get('screen').width;
 const screenHeight = Dimensions.get('screen').height;
 
 
-const url = 'https://unified-vervet-slowly.ngrok-free.app'
+const url = 'http://127.0.0.1:8000'
 
 export default function HomeScreen() {
     const screenAspectRatio = screenHeight / screenWidth;
@@ -66,6 +66,8 @@ export default function HomeScreen() {
     const [isImageFromCamera, setIsImageFromCamera] = useState(true)
     const [showModels, setShowModels] = useState(false)
     const [modelName, setModelName] = useState("predict")
+    const [manualInput, setManualInput] = useState("");
+    const [showManualInput, setShowManualInput] = useState(false);
 
     //! DEBUG
     const [debugImage, setDebugImage] = useState("")
@@ -466,31 +468,62 @@ export default function HomeScreen() {
         }
     };
 
+    const handleManualInputSubmit = () => {
+        if (!manualInput.trim()) return;
 
+        setPreview(false);
+        setIsImageFromCamera(false);
+        setIsCaptureLoading(true);
 
+        // Process the equation directly without API
+        try {
+            // Format the input equation similar to what would come from the API
+            const formattedEquation = manualInput.trim();
 
+            console.log("Manual input equation:", formattedEquation);
+            setEquationResponse(toLatex(formattedEquation));
 
+            // Analyze the type of equation
+            analyzeFunction(formattedEquation);
 
-    function fixLatexInput(latex) {
-        let stack = [];
-        let correctedLatex = "";
-
-        for (let i = 0; i < latex.length; i++) {
-            let char = latex[i];
-            if (char === '{') {
-                stack.push('{');
-            } else if (char === '}') {
-                if (stack.length === 0) continue;
-                stack.pop();
+            // If it's an equation with an isolated variable, set it up for graphing
+            if (formattedEquation.includes("=")) {
+                const parts = formattedEquation.split("=");
+                if (parts.length === 2) {
+                    // Rearrange to isolate y if possible (simplified approach)
+                    if (formattedEquation.toLowerCase().includes("y")) {
+                        setIsolatedEquation(formattedEquation);
+                    }
+                }
+            } else {
+                // For non-equation expressions
+                setIsolatedEquation(formattedEquation);
             }
-            correctedLatex += char;
+
+            // For simple equations, try to solve
+            if (formattedEquation.includes("=") && !formattedEquation.includes("y")) {
+                try {
+                    // Very basic equation solving (just for simple cases)
+                    const parts = formattedEquation.split("=");
+                    if (parts.length === 2) {
+                        // This is a very simplified solver and won't work for complex equations
+                        const solution = eval(parts[1] + "-(" + parts[0] + ")");
+                        setEquationResponseSolition([solution.toString()]);
+                    }
+                } catch (error) {
+                    console.error("Error solving equation:", error);
+                    setEquationResponseSolition(["Unable to solve"]);
+                }
+            }
+
+            bottomSheetRef.current.snapToIndex(1);
+        } catch (error) {
+            console.error("Error processing manual input:", error);
+        } finally {
+            setIsCaptureLoading(false);
+            setShowManualInput(false);
         }
-        while (stack.length > 0) {
-            correctedLatex += '}';
-            stack.pop();
-        }
-        return correctedLatex;
-    }
+    };
 
     return (
         <View style={{ flex: 1 }}>
@@ -615,7 +648,79 @@ export default function HomeScreen() {
                     </View>
                 </View>
             }
+            {/* Manual Input Button */}
+            <TouchableOpacity
+                onPress={() => setShowManualInput(!showManualInput)}
+                style={{
+                    position: "absolute",
+                    top: 50,
+                    right: 14,
+                    alignSelf: "center",
+                    backgroundColor: "rgba(0, 0, 0, 0.6)",
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 30,
+                }}
+            >
+                <Text style={{ color: "white", fontWeight: "500" }}>
+                    {showManualInput ? "Gizle" : "Fonksiyon gir"}
+                </Text>
+            </TouchableOpacity>
 
+            {/* Manual Input Panel */}
+            {showManualInput && (
+                <Animated.View
+                    entering={FadeIn}
+                    exiting={FadeOut}
+                    style={{
+                        position: "absolute",
+                        bottom: 80,
+                        width: screenWidth - 40,
+                        backgroundColor: "#FFF",
+                        borderRadius: 15,
+                        padding: 15,
+                        alignSelf: "center",
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 5,
+                    }}
+                >
+                    <Text style={{ marginBottom: 10, fontWeight: "600", color: "#333" }}>
+                        Matematik fonksiyonu girin (ör: y=x^2, x+y=5)
+                    </Text>
+                    <TextInput
+                        style={{
+                            height: 50,
+                            borderColor: '#ddd',
+                            borderWidth: 1,
+                            borderRadius: 10,
+                            paddingHorizontal: 15,
+                            marginBottom: 15,
+                            fontSize: 16,
+                        }}
+                        value={manualInput}
+                        onChangeText={setManualInput}
+                        placeholder="örn: x=y^2, 2x+3=9"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                        onPress={handleManualInputSubmit}
+                        style={{
+                            backgroundColor: "#09a350",
+                            paddingVertical: 12,
+                            borderRadius: 10,
+                            alignItems: "center",
+                        }}
+                    >
+                        <Text style={{ color: "white", fontWeight: "600", fontSize: 16 }}>
+                            Hesapla
+                        </Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            )}
 
             <TransparentViewTop />
             <TransparentViewBottom />

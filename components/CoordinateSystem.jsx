@@ -61,60 +61,105 @@ const getLinePath = (mathFunction, width, height, squareSize) => {
 
     // Configuration
     const config = {
-        xStart: -15,
-        xEnd: 15,
+        xStart: -30,
+        xEnd: 30,
         step: 0.1,
-        maxGap: 100 // Maximum allowed gap between consecutive y values
+        maxGap: 100
     };
 
-    let lastY = null;
-    let isDrawing = false;
+    // For y-equations (y=f(x)), we iterate over x and calculate y
+    if (isYEquation) {
+        let lastY = null;
+        let isDrawing = false;
 
-    // Main calculation loop
-    for (let x = config.xStart; x <= config.xEnd; x += config.step) {
-        // Calculate y value based on equation type
-        const y = isYEquation
-            ? evaluatePoint(mathFunction, x, null, true)
-            : solveForY(mathFunction, x);
+        for (let x = config.xStart; x <= config.xEnd; x += config.step) {
+            const y = evaluatePoint(mathFunction, x, null, true);
 
-        // Skip invalid points
-        if (y === null || !isFinite(y)) {
-            isDrawing = false;
-            continue;
+            // Skip invalid points
+            if (y === null || !isFinite(y)) {
+                isDrawing = false;
+                continue;
+            }
+
+            // Calculate canvas coordinates
+            const canvasX = width / 2 + x * squareSize;
+            const canvasY = height / 2 - y * squareSize;
+
+            // Handle discontinuities
+            if (lastY !== null && Math.abs(y - lastY) > config.maxGap) {
+                isDrawing = false;
+            }
+
+            // Draw path
+            if (!isDrawing) {
+                path.moveTo(canvasX, canvasY);
+                isDrawing = true;
+            } else {
+                path.lineTo(canvasX, canvasY);
+            }
+
+            // Store point data
+            points.push({
+                x: canvasX,
+                y: canvasY,
+                xValue: x.toFixed(2),
+                yValue: y.toFixed(2)
+            });
+
+            lastY = y;
         }
+    }
+    // For x-equations (x=f(y)), we iterate over y and calculate x
+    else {
+        let lastX = null;
+        let isDrawing = false;
 
-        // Calculate canvas coordinates
-        const canvasX = width / 2 + x * squareSize;
-        const canvasY = height / 2 - y * squareSize;
+        // For x=y^2 specifically, we want to render the entire parabola
+        // This means we need to iterate through y values instead of x values
+        for (let y = config.xStart; y <= config.xEnd; y += config.step) {
+            // Calculate x value directly
+            const x = evaluatePoint(mathFunction, null, y, false);
 
-        // Handle discontinuities
-        if (lastY !== null && Math.abs(y - lastY) > config.maxGap) {
-            isDrawing = false;
+            // Skip invalid points
+            if (x === null || !isFinite(x)) {
+                isDrawing = false;
+                continue;
+            }
+
+            // Calculate canvas coordinates
+            const canvasX = width / 2 + x * squareSize;
+            const canvasY = height / 2 - y * squareSize;
+
+            // Handle discontinuities
+            if (lastX !== null && Math.abs(x - lastX) > config.maxGap) {
+                isDrawing = false;
+            }
+
+            // Draw path
+            if (!isDrawing) {
+                path.moveTo(canvasX, canvasY);
+                isDrawing = true;
+            } else {
+                path.lineTo(canvasX, canvasY);
+            }
+
+            // Store point data
+            points.push({
+                x: canvasX,
+                y: canvasY,
+                xValue: x.toFixed(2),
+                yValue: y.toFixed(2)
+            });
+
+            lastX = x;
         }
-
-        // Draw path
-        if (!isDrawing) {
-            path.moveTo(canvasX, canvasY);
-            isDrawing = true;
-        } else {
-            path.lineTo(canvasX, canvasY);
-        }
-
-        // Store point data
-        points.push({
-            x: canvasX,
-            y: canvasY,
-            xValue: x.toFixed(2),
-            yValue: y.toFixed(2)
-        });
-
-        lastY = y;
     }
 
     const result = { path, points };
     calculationCache.set(cacheKey, result);
     return result;
 };
+
 
 const CoordinateSystem = ({ mathFunction, scaleProp, isGestureActive }) => {
     let isPanning = false;
