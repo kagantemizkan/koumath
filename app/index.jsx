@@ -541,7 +541,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity style={{ paddingHorizontal: 36, paddingVertical: 12 }} onPress={() => {
-                        setShowModels("https://unified-vervet-slowly.ngrok-free.app")
+                        setApiUrl("https://unified-vervet-slowly.ngrok-free.app")
                     }}>
                         <Text>Ngrok API</Text>
                     </TouchableOpacity>
