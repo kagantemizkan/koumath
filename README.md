@@ -1,5 +1,3 @@
-# KouMath
-
 <img src="https://github.com/user-attachments/assets/2a5ebee7-65c8-4fe6-8c09-eb2fde5864ef" alt="koumath" width="370">
 
 ## About Project
